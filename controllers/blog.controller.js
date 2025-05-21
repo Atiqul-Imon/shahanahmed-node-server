@@ -14,12 +14,11 @@ export const createBlog = async (req, res) => {
     const image = req.file;
     const author = req.userId;
 
-    // Validate required fields
     if (!title || !description) {
       return res.status(400).json({ message: "Title and description are required" });
     }
 
-    let imageUrl = "";
+    let imageData = {};
 
     if (image) {
       const base64Image = Buffer.from(image.buffer).toString("base64");
@@ -28,7 +27,12 @@ export const createBlog = async (req, res) => {
       const result = await cloudinary.uploader.upload(dataURI, {
         folder: "blog",
       });
-      imageUrl = result.secure_url;
+      
+
+      imageData = {
+        url: result.secure_url,
+        public_id: result.public_id
+      };
     }
 
     const newBlog = new Blog({
@@ -36,7 +40,7 @@ export const createBlog = async (req, res) => {
       description,
       categories,
       status,
-      image: imageUrl,
+      image: imageData, 
       author,
     });
 
@@ -116,9 +120,9 @@ export const deleteBlog = async (req, res) => {
     }
 
   
-    if (blog.image?.public_id) {
-      await cloudinary.uploader.destroy(blog.image.public_id);
-    }
+  if (blog.image?.public_id) {
+  await cloudinary.uploader.destroy(blog.image.public_id);
+}
     
     if (blog.bodyImages?.length) {
       for (const img of blog.bodyImages) {
