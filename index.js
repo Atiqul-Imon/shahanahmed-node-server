@@ -9,6 +9,7 @@ import userRouter from './routes/user.route.js';
 import blogRouter from './routes/blog.route.js';
 import snippetRouter from './routes/snippet.route.js';
 import jobsRouter from './routes/jobs.js';
+import huggingRouter from './routes/huggingface.js';
 
 dotenv.config();
 
@@ -33,6 +34,8 @@ app.use("/api/user", userRouter);
 app.use("/api/blog", blogRouter);
 app.use("/api/snippet", snippetRouter); 
 app.use('/api/jobs', jobsRouter);
+
+app.use("/api", huggingRouter);
 
 const PORT = process.env.PORT || 3000;
 

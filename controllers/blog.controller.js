@@ -106,3 +106,70 @@ export const getBlogById = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+
+export const deleteBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+  
+    if (blog.image?.public_id) {
+      await cloudinary.uploader.destroy(blog.image.public_id);
+    }
+    
+    if (blog.bodyImages?.length) {
+      for (const img of blog.bodyImages) {
+        await cloudinary.uploader.destroy(img.public_id);
+      }
+    }
+
+    await Blog.findByIdAndDelete(req.params.id);
+    return res.json({ success: true, message: "Blog deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting blog:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+export const updateBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, categories, status } = req.body;
+    const image = req.file;
+    const updateData = { title, description, categories, status };
+
+    const blog = await Blog.findById(id);
+    if (!blog) return res.status(404).json({ message: "Blog not found" });
+
+    if (image) {
+    
+      const base64Image = Buffer.from(image.buffer).toString("base64");
+      const dataURI = `data:${image.mimetype};base64,${base64Image}`;
+      const result = await cloudinary.uploader.upload(dataURI, { folder: "blog" });
+
+    
+      if (blog.image?.public_id) {
+        await cloudinary.uploader.destroy(blog.image.public_id);
+      }
+
+      updateData.image = {
+        url: result.secure_url,
+        public_id: result.public_id
+      };
+    }
+
+    const updatedBlog = await Blog.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true
+    }).populate('author', 'name email');
+
+    return res.json({ success: true, blog: updatedBlog });
+  } catch (error) {
+    console.error("Error updating blog:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};

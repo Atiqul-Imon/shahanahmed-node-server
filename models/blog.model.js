@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 const blogSchema = new mongoose.Schema(
   {
     image: {
-      type: String,
-    },
+    url: String,
+    public_id: String,
+  },
     bodyImages: [
       {
         url: String,
