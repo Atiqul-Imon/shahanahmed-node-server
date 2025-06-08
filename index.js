@@ -10,6 +10,7 @@ import blogRouter from './routes/blog.route.js';
 import snippetRouter from './routes/snippet.route.js';
 import jobsRouter from './routes/jobs.js';
 import huggingRouter from './routes/huggingface.js';
+import projectRouter from './routes/project.route.js';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.get('/', (req, res) => {
 
 app.use("/api/user", userRouter);
 app.use("/api/blog", blogRouter);
+app.use("/api/project", projectRouter);
 app.use("/api/snippet", snippetRouter); 
 app.use('/api/jobs', jobsRouter);
 
