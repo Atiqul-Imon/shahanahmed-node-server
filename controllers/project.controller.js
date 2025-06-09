@@ -143,25 +143,30 @@ export const deleteProject = async (req, res) => {
 export const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, status } = req.body;
-    const image = req.file;
-    const updateData = { title, description, status };
-    const bodyImagesFiles = req.files?.bodyImages || [];
-
+    const { title, description } = req.body; // Remove status as it's not in your form
+    const featuredImage = req.file;
 
     const project = await Project.findById(id);
-    if (!project) return res.status(404).json({ message: "Project not found" });
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found" });
+    }
 
-    if (image) {
-    
-      const base64Image = Buffer.from(image.buffer).toString("base64");
-      const dataURI = `data:${image.mimetype};base64,${base64Image}`;
-      const result = await cloudinary.uploader.upload(dataURI, { folder: "project" });
+    // Prepare update data
+    const updateData = { title, description };
 
-    
+    // Handle image update if new image is provided
+    if (featuredImage) {
+      // Delete old image if exists
       if (project.image?.public_id) {
         await cloudinary.uploader.destroy(project.image.public_id);
       }
+
+      // Upload new image
+      const base64Image = Buffer.from(featuredImage.buffer).toString("base64");
+      const dataURI = `data:${featuredImage.mimetype};base64,${base64Image}`;
+      const result = await cloudinary.uploader.upload(dataURI, {
+        folder: "project",
+      });
 
       updateData.image = {
         url: result.secure_url,
@@ -169,31 +174,31 @@ export const updateProject = async (req, res) => {
       };
     }
 
-    let newBodyImagesData = [];
-    for (const file of bodyImagesFiles) {
-      const base64Image = Buffer.from(file.buffer).toString("base64");
-      const dataURI = `data:${file.mimetype};base64,${base64Image}`;
-      const result = await cloudinary.uploader.upload(dataURI, { folder: "project/body" });
-      
-      newBodyImagesData.push({
-        url: result.secure_url,
-        public_id: result.public_id
-      });
-    }
+    const updatedProject = await Project.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
-     const existingBodyImages = project.bodyImages || [];
-    const updatedBodyImages = [...existingBodyImages, ...newBodyImagesData];
-
-    updateData.bodyImages = updatedBodyImages;
-
-    const updatedProject = await Project.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true
-    })
-
-    return res.json({ success: true, project: updatedProject });
+    return res.json({
+      success: true,
+      project: updatedProject,
+      message: "Project updated successfully"
+    });
   } catch (error) {
     console.error("Error updating project:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
   }
 };

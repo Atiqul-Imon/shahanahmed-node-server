@@ -18,10 +18,8 @@ projectRouter.post(
 projectRouter.put(
   "/:id",
   authenticate,
-  upload.fields([
-    { name: "image", maxCount: 1 },
-    { name: "bodyImages", maxCount: 10 },
-  ]),
+  upload.single("image"
+  ),
   updateProject
 );
 projectRouter.delete("/:id", authenticate, deleteProject);

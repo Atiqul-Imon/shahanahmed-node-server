@@ -11,6 +11,7 @@ import snippetRouter from './routes/snippet.route.js';
 import jobsRouter from './routes/jobs.js';
 import huggingRouter from './routes/huggingface.js';
 import projectRouter from './routes/project.route.js';
+import router from './routes/general.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use("/api/blog", blogRouter);
 app.use("/api/project", projectRouter);
 app.use("/api/snippet", snippetRouter); 
 app.use('/api/jobs', jobsRouter);
+app.use('/api', router); 
 
 app.use("/api", huggingRouter);
 
