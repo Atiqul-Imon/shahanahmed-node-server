@@ -10,40 +10,43 @@ cloudinary.config({
 
 export const createProject = async (req, res) => {
   try {
-    const { title, description, status = "draft" } = req.body;
-    const featuredImage = req.file;
-
-
+    const { title, description, status = "draft", technologies, liveUrl, sourceUrl } = req.body;
+    const files = req.files;
 
     if (!title || !description) {
       return res.status(400).json({ message: "Title and description are required" });
     }
 
-    let imageData = {};
+    let imagesData = [];
 
-    if (featuredImage) {
-      const base64Image = Buffer.from(featuredImage.buffer).toString("base64");
-      const dataURI = `data:${featuredImage.mimetype};base64,${base64Image}`;
+    if (files && files.length > 0) {
+      // Filter for files from the 'images' field
+      const imageFiles = files.filter(file => file.fieldname === 'images');
 
-      const result = await cloudinary.uploader.upload(dataURI, {
-        folder: "project",
+      const uploadPromises = imageFiles.map(file => {
+        const base64Image = Buffer.from(file.buffer).toString("base64");
+        const dataURI = `data:${file.mimetype};base64,${base64Image}`;
+        return cloudinary.uploader.upload(dataURI, {
+          folder: "project",
+        });
       });
-      
 
-      imageData = {
+      const results = await Promise.all(uploadPromises);
+      
+      imagesData = results.map(result => ({
         url: result.secure_url,
         public_id: result.public_id
-      };
+      }));
     }
-
-   
 
     const newProject = new Project({
       title,
       description,
       status,
-      image: imageData,
-      
+      images: imagesData,
+      technologies: technologies ? technologies.split(',').map(item => item.trim()) : [],
+      liveUrl,
+      sourceUrl
     });
 
     await newProject.save();
@@ -56,13 +59,11 @@ export const createProject = async (req, res) => {
   } catch (error) {
     console.error("Error creating project:", error);
     return res.status(500).json({
-      message: "Internal server error",
+      message: error.message || "Internal server error",
       success: false,
     });
   }
 };
-
-
 
 export const getAllProjects = async (req, res) => {
   try {
@@ -112,7 +113,6 @@ export const getProjectById = async (req, res) => {
   }
 };
 
-
 export const deleteProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
@@ -120,15 +120,10 @@ export const deleteProject = async (req, res) => {
       return res.status(404).json({ success: false, message: "Project not found" });
     }
 
-  
-  if (project.image?.public_id) {
-  await cloudinary.uploader.destroy(project.image.public_id);
-}
-    
-    if (project.bodyImages?.length) {
-      for (const img of project.bodyImages) {
-        await cloudinary.uploader.destroy(img.public_id);
-      }
+    // Delete all images associated with the project from Cloudinary
+    if (project.images && project.images.length > 0) {
+      const deletePromises = project.images.map(img => cloudinary.uploader.destroy(img.public_id));
+      await Promise.all(deletePromises);
     }
 
     await Project.findByIdAndDelete(req.params.id);
@@ -139,12 +134,11 @@ export const deleteProject = async (req, res) => {
   }
 };
 
-
 export const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description } = req.body; // Remove status as it's not in your form
-    const featuredImage = req.file;
+    const { title, description, technologies, liveUrl, sourceUrl, status } = req.body;
+    const files = req.files;
 
     const project = await Project.findById(id);
     if (!project) {
@@ -152,31 +146,34 @@ export const updateProject = async (req, res) => {
     }
 
     // Prepare update data
-    const updateData = { title, description };
+    const updateData = { title, description, liveUrl, sourceUrl, status };
+    if (technologies) {
+      updateData.technologies = technologies.split(',').map(item => item.trim());
+    }
 
-    // Handle image update if new image is provided
-    if (featuredImage) {
-      // Delete old image if exists
-      if (project.image?.public_id) {
-        await cloudinary.uploader.destroy(project.image.public_id);
-      }
-
-      // Upload new image
-      const base64Image = Buffer.from(featuredImage.buffer).toString("base64");
-      const dataURI = `data:${featuredImage.mimetype};base64,${base64Image}`;
-      const result = await cloudinary.uploader.upload(dataURI, {
-        folder: "project",
+    // Handle image update if new images are provided
+    if (files && files.length > 0) {
+       const uploadPromises = files.map(file => {
+        const base64Image = Buffer.from(file.buffer).toString("base64");
+        const dataURI = `data:${file.mimetype};base64,${base64Image}`;
+        return cloudinary.uploader.upload(dataURI, {
+          folder: "project",
+        });
       });
 
-      updateData.image = {
+      const results = await Promise.all(uploadPromises);
+      
+      const newImagesData = results.map(result => ({
         url: result.secure_url,
         public_id: result.public_id
-      };
+      }));
+      
+      updateData.images = [...project.images, ...newImagesData];
     }
 
     const updatedProject = await Project.findByIdAndUpdate(
       id,
-      updateData,
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 
@@ -188,7 +185,6 @@ export const updateProject = async (req, res) => {
   } catch (error) {
     console.error("Error updating project:", error);
     
-    // Handle validation errors
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,

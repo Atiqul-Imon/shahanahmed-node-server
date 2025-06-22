@@ -11,7 +11,17 @@ import snippetRouter from './routes/snippet.route.js';
 import jobsRouter from './routes/jobs.js';
 import huggingRouter from './routes/huggingface.js';
 import projectRouter from './routes/project.route.js';
-import router from './routes/general.js';
+import imageRouter from './routes/image.route.js';
+import contactRouter from './routes/contact.route.js';
+import generalRouter from './routes/general.js';
+
+// --- Global Error Handlers ---
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(error.name, error.message);
+  console.error(error.stack);
+  process.exit(1);
+});
 
 dotenv.config();
 
@@ -28,23 +38,32 @@ app.use(helmet({
 
 
 app.get('/', (req, res) => {
-    res.json("Server is running");
+    res.send('Server is running');
 });
 
 
 app.use("/api/user", userRouter);
-app.use("/api/blog", blogRouter);
 app.use("/api/project", projectRouter);
-app.use("/api/snippet", snippetRouter); 
-app.use('/api/jobs', jobsRouter);
-app.use('/api', router); 
-
+app.use("/api/snippet", snippetRouter);
+app.use("/api/blog", blogRouter);
+app.use("/api/jobs", jobsRouter);
 app.use("/api", huggingRouter);
+app.use("/api/image", imageRouter);
+app.use("/api/contact", contactRouter);
+app.use("/api", generalRouter);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-    app.listen(PORT, () => {
+const server = connectDB().then(() => {
+    return app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(error.name, error.message);
+  server.then(s => s.close(() => {
+    process.exit(1);
+  }));
 });

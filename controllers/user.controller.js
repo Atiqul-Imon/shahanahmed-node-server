@@ -4,6 +4,12 @@ import jwt from "jsonwebtoken";
 import generateAccessToken from "../utils/generateAccessToken.js";
 import generateRefreshToken from "../utils/generateRefreshToken.js";
 
+const ALLOWED_EMAILS = [
+    "imonatikulislam@gmail.com",
+    "shahan24h@gmail.com",
+    "atiqulimon.dev@gmail.com"
+];
+
 export async function RegisterUser(req, res){
     try {
         const {name, email, password} = req.body;
@@ -16,6 +22,14 @@ export async function RegisterUser(req, res){
             });
         }
 
+        // Check if the email is in the allowed list
+        if (!ALLOWED_EMAILS.includes(email)) {
+            return res.status(403).json({
+                message: "Sorry, registration is restricted to authorized users only.",
+                error: true,
+                success: false,
+            });
+        }
 
        const existingUser = await User.findOne({ email: email});
 

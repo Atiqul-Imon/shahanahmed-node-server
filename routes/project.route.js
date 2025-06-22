@@ -11,15 +11,14 @@ projectRouter.get("/:id", getProjectById);
 projectRouter.post(
   "/create",
   authenticate,
-  upload.single("image"),  
+  upload.any(),
   createProject
 );
 
 projectRouter.put(
   "/:id",
   authenticate,
-  upload.single("image"
-  ),
+  upload.any(),
   updateProject
 );
 projectRouter.delete("/:id", authenticate, deleteProject);

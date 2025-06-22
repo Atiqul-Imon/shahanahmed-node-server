@@ -2,11 +2,6 @@ import mongoose from "mongoose";
 
 const projectSchema = new mongoose.Schema(
   {
-    image: {
-    url: String,
-    public_id: String,
-  },
-    
     title: {
       type: String,
       required: true,
@@ -17,14 +12,30 @@ const projectSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    
+    images: [
+      {
+        url: String,
+        public_id: String,
+      },
+    ],
+    technologies: {
+      type: [String],
+      default: [],
+    },
+    liveUrl: {
+      type: String,
+      trim: true,
+    },
+    sourceUrl: {
+      type: String,
+      trim: true,
+    },
     status: {
       type: String,
       enum: ["draft", "published"],
       default: "draft",
       index: true,
     },
-   
     publishDate: Date,
   },
   {
