@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import connectDB from './config/db.config.js';
+import { generalLimiter } from './middlewares/rateLimit.js';
 import userRouter from './routes/user.route.js';
 import snippetRouter from './routes/snippet.route.js';
 import jobsRouter from './routes/jobs.js';
@@ -41,6 +42,8 @@ app.get('/', (req, res) => {
     res.send('Server is running');
 });
 
+// Apply general rate limiting to all API routes
+app.use("/api", generalLimiter);
 
 app.use("/api/user", userRouter);
 app.use("/api/project", projectRouter);
